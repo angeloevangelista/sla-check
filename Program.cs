@@ -106,6 +106,8 @@ namespace SlaCheck
           out isWeekend,
           out isHoliday
         );
+
+        isValidDate = !isWeekend && !isHoliday && isBusinessPeriodOfDay;
       }
 
       return slaExpirationDate;

@@ -17,7 +17,7 @@ namespace SlaCheck.Services
             year: 2021,
             month: 5,
             day: 6,
-            hour: 10, // <- This is the big hour >:D
+            hour: 18, // <- This is the big hour >:D
             0,
             0
           )
