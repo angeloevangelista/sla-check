@@ -20,8 +20,8 @@ namespace SlaCheck
       foreach (var document in documents)
       {
         var slaIsValid = CheckSlaValidity(
-          document, 
-          businessPeriod, 
+          document,
+          businessPeriod,
           AppSettings.SlaInterval
         );
 
@@ -75,13 +75,21 @@ namespace SlaCheck
       CheckIsBusinessDate(
         businessPeriod,
         slaExpirationDate,
+        slaIntervalInHours,
         out remainingTime,
         out isBusinessPeriodOfDay,
         out isWeekend,
         out isHoliday
       );
 
-      var isValidDate = !isWeekend && !isHoliday && isBusinessPeriodOfDay;
+      var slaExpirationOccursTheSameDay =
+        slaExpirationDate.Day == initialDate.Day;
+
+      var isValidDate =
+        !isWeekend
+        && !isHoliday
+        && isBusinessPeriodOfDay
+        && slaExpirationOccursTheSameDay;
 
       while (!isValidDate || remainingTime.TotalSeconds > 0)
       {
@@ -90,19 +98,20 @@ namespace SlaCheck
         var nextBusinessPeriodBegin = new DateTime(
           slaExpirationDate.Year,
           slaExpirationDate.Month,
-          slaExpirationDate.Day + 1,
+          slaExpirationDate.Day,
           businessPeriod.Start,
           0,
           0
-        );
+        ).AddDays(1);
 
         slaExpirationDate = remainingTime.TotalSeconds > 0
-          ? nextBusinessPeriodBegin.Add(remainingTime)
+          ? nextBusinessPeriodBegin.AddHours(remainingTime.Hours)
           : nextBusinessPeriodBegin.AddSeconds(slaIntervalInHours * 3600);
 
         CheckIsBusinessDate(
           businessPeriod,
           slaExpirationDate,
+          slaIntervalInHours,
           out remainingTime,
           out isBusinessPeriodOfDay,
           out isWeekend,
@@ -118,6 +127,7 @@ namespace SlaCheck
     private static void CheckIsBusinessDate(
       TimePeriod businessPeriod,
       DateTime slaExpirationDate,
+      int slaIntervalInHours,
       out TimeSpan remainingTime,
       out bool isBusinessPeriodOfDay,
       out bool isWeekend,
@@ -126,17 +136,55 @@ namespace SlaCheck
     {
       isBusinessPeriodOfDay = CheckIsBusinessPeriod(
         slaExpirationDate,
-        businessPeriod,
-        out remainingTime
+        businessPeriod
       );
 
-      isWeekend = CheckIsWeekend(
-        slaExpirationDate.Add(remainingTime)
-      );
+      if (isBusinessPeriodOfDay)
+      {
+        remainingTime = new TimeSpan();
 
-      isHoliday = CheckIsHoliday(
-        slaExpirationDate.Add(remainingTime)
-      );
+        isWeekend = CheckIsWeekend(
+          slaExpirationDate.Add(remainingTime)
+        );
+
+        isHoliday = CheckIsHoliday(
+          slaExpirationDate.Add(remainingTime)
+        );
+      }
+      else
+      {
+        isWeekend = false;
+        isHoliday = false;
+
+        var originalDate = (slaExpirationDate.AddHours(-slaIntervalInHours));
+
+        var beginOfBusinessPeriod = new DateTime(
+          originalDate.Year,
+          originalDate.Month,
+          originalDate.Day,
+          businessPeriod.Start,
+          0,
+          0
+        );
+
+        var endOfBusinessPeriod = new DateTime(
+          originalDate.Year,
+          originalDate.Month,
+          originalDate.Day,
+          businessPeriod.End,
+          0,
+          0
+        );
+
+        var expirationBeginDiff = slaExpirationDate - beginOfBusinessPeriod;
+        var expirationEndDiff = slaExpirationDate - endOfBusinessPeriod;
+
+        remainingTime = expirationBeginDiff < expirationEndDiff
+          ? new TimeSpan()
+          : slaExpirationDate.Subtract(
+              new TimeSpan(businessPeriod.End - businessPeriod.Start, 0, 0)
+            ) - beginOfBusinessPeriod;
+      }
     }
 
     private static bool CheckIsWeekend(DateTime date)
@@ -160,42 +208,33 @@ namespace SlaCheck
     }
 
     private static bool CheckIsBusinessPeriod(
-      DateTime dateToCheck,
-      TimePeriod businessPeriod,
-      out TimeSpan remainingTime
+      DateTime date,
+      TimePeriod businessPeriod
     )
     {
       var isBusinessPeriod = true;
 
       var beginOfBusinessPeriod = new DateTime(
-        dateToCheck.Year,
-        dateToCheck.Month,
-        dateToCheck.Day,
+        date.Year,
+        date.Month,
+        date.Day,
         businessPeriod.Start,
         0,
         0
       );
 
       var endOfBusinessPeriod = new DateTime(
-        dateToCheck.Year,
-        dateToCheck.Month,
-        dateToCheck.Day,
+        date.Year,
+        date.Month,
+        date.Day,
         businessPeriod.End,
         0,
         0
       );
 
       isBusinessPeriod =
-        beginOfBusinessPeriod <= dateToCheck
-        && dateToCheck <= endOfBusinessPeriod;
-
-      if(isBusinessPeriod) {
-        remainingTime = new TimeSpan();
-      } else {
-        remainingTime = (endOfBusinessPeriod.Hour - dateToCheck.Hour) < 0
-          ? new TimeSpan()
-          : (endOfBusinessPeriod - dateToCheck).Duration();
-      }
+        beginOfBusinessPeriod <= date
+        && date <= endOfBusinessPeriod;
 
       return isBusinessPeriod;
     }
