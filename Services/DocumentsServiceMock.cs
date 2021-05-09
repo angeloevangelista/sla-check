@@ -15,9 +15,9 @@ namespace SlaCheck.Services
         {
           PublishDate = new DateTime(
             year: 2021,
-            month: 5,
-            day: 6,
-            hour: 18, // <- This is the big hour >:D
+            month: 1,
+            day: 1,
+            hour: 10, // <- This is the big hour >:D
             0,
             0
           )

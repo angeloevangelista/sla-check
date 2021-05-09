@@ -96,7 +96,9 @@ namespace SlaCheck
           0
         );
 
-        slaExpirationDate = nextBusinessPeriodBegin.Add(remainingTime);
+        slaExpirationDate = remainingTime.TotalSeconds > 0
+          ? nextBusinessPeriodBegin.Add(remainingTime)
+          : nextBusinessPeriodBegin.AddSeconds(slaIntervalInHours * 3600);
 
         CheckIsBusinessDate(
           businessPeriod,
@@ -187,9 +189,13 @@ namespace SlaCheck
         beginOfBusinessPeriod <= dateToCheck
         && dateToCheck <= endOfBusinessPeriod;
 
-      remainingTime = isBusinessPeriod
-        ? new TimeSpan()
-        : (endOfBusinessPeriod - dateToCheck).Duration();
+      if(isBusinessPeriod) {
+        remainingTime = new TimeSpan();
+      } else {
+        remainingTime = (endOfBusinessPeriod.Hour - dateToCheck.Hour) < 0
+          ? new TimeSpan()
+          : (endOfBusinessPeriod - dateToCheck).Duration();
+      }
 
       return isBusinessPeriod;
     }
