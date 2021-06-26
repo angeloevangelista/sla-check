@@ -1,6 +1,6 @@
-namespace SlaCheck.Entities
+namespace SlaChecker.Domain.Entities.HolidayApi
 {
-  public class Date
+  public class HolidayApiDate
   {
     public string Name { get; set; }
     public long Numeric { get; set; }

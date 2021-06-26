@@ -1,4 +1,6 @@
-namespace SlaCheck.Entities
+using System;
+
+namespace SlaChecker.Domain.Entities
 {
   public class TimePeriod
   {

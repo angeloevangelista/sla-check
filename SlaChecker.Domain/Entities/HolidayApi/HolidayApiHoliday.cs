@@ -1,8 +1,8 @@
 using System;
 
-namespace SlaCheck.Entities
+namespace SlaChecker.Domain.Entities.HolidayApi
 {
-  public class Holiday
+  public class HolidayApiHoliday
   {
     public string Name { get; set; }
     public DateTimeOffset Date { get; set; }
@@ -10,6 +10,6 @@ namespace SlaCheck.Entities
     public bool Public { get; set; }
     public string Country { get; set; }
     public Guid Uuid { get; set; }
-    public Weekday Weekday { get; set; }
+    public HolidayApiWeekday Weekday { get; set; }
   }
 }

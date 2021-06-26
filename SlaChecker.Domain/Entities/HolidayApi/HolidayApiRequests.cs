@@ -1,8 +1,8 @@
 using System;
 
-namespace SlaCheck.Entities
+namespace SlaChecker.Domain.Entities.HolidayApi
 {
-  public class Requests
+  public class HolidayApiRequests
   {
     public long Used { get; set; }
     public long Available { get; set; }
