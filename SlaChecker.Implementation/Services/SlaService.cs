@@ -65,7 +65,9 @@ namespace SlaChecker.Implementation.Services
         && isBusinessPeriodOfDay
         && slaExpirationOccursTheSameDay;
 
-      while (!isValidDate || remainingTime.TotalSeconds > 0)
+      var currentRemainingTime = remainingTime;
+
+      while (!isValidDate || currentRemainingTime.TotalSeconds > 0)
       {
         var nextBusinessPeriodBegin = new DateTime(
           slaExpirationDate.Year,
@@ -76,8 +78,8 @@ namespace SlaChecker.Implementation.Services
           0
         ).AddDays(1);
 
-        slaExpirationDate = remainingTime.TotalSeconds > 0
-          ? nextBusinessPeriodBegin.AddHours(remainingTime.Hours)
+        slaExpirationDate = currentRemainingTime.TotalSeconds > 0
+          ? nextBusinessPeriodBegin.AddHours(currentRemainingTime.Hours)
           : nextBusinessPeriodBegin.AddSeconds(slaIntervalInHours * 3600);
 
         CheckIsBusinessDate(
@@ -91,6 +93,12 @@ namespace SlaChecker.Implementation.Services
         );
 
         isValidDate = !isWeekend && !isHoliday && isBusinessPeriodOfDay;
+
+        if (remainingTime.TotalSeconds > 0)
+          currentRemainingTime = remainingTime;
+
+        if (isValidDate)
+          currentRemainingTime = new TimeSpan();
       }
 
       return slaExpirationDate;
@@ -98,7 +106,7 @@ namespace SlaChecker.Implementation.Services
 
     public void CheckIsBusinessDate(
       TimePeriod businessPeriod,
-      DateTime slaExpirationDate,
+      DateTime date,
       int slaIntervalInHours,
       out TimeSpan remainingTime,
       out bool isBusinessPeriodOfDay,
@@ -107,28 +115,15 @@ namespace SlaChecker.Implementation.Services
     )
     {
       isBusinessPeriodOfDay = CheckIsBusinessPeriod(
-        slaExpirationDate,
+        date,
         businessPeriod
       );
 
       if (isBusinessPeriodOfDay)
-      {
         remainingTime = new TimeSpan();
-
-        isWeekend = CheckIsWeekend(
-          slaExpirationDate.Add(remainingTime)
-        );
-
-        isHoliday = CheckIsHoliday(
-          slaExpirationDate.Add(remainingTime)
-        );
-      }
       else
       {
-        isWeekend = false;
-        isHoliday = false;
-
-        var originalDate = (slaExpirationDate.AddHours(-slaIntervalInHours));
+        var originalDate = (date.AddHours(-slaIntervalInHours));
 
         var beginOfBusinessPeriod = new DateTime(
           originalDate.Year,
@@ -148,15 +143,23 @@ namespace SlaChecker.Implementation.Services
           0
         );
 
-        var expirationBeginDiff = slaExpirationDate - beginOfBusinessPeriod;
-        var expirationEndDiff = slaExpirationDate - endOfBusinessPeriod;
+        var expirationBeginDiff = date - beginOfBusinessPeriod;
+        var expirationEndDiff = date - endOfBusinessPeriod;
 
         remainingTime = expirationBeginDiff < expirationEndDiff
           ? new TimeSpan()
-          : slaExpirationDate.Subtract(
+          : date.Subtract(
               new TimeSpan(businessPeriod.End - businessPeriod.Start, 0, 0)
             ) - beginOfBusinessPeriod;
       }
+
+      isWeekend = CheckIsWeekend(
+        date.Add(remainingTime)
+      );
+
+      isHoliday = CheckIsHoliday(
+        date.Add(remainingTime)
+      );
     }
 
     public bool CheckIsBusinessPeriod(DateTime date, TimePeriod businessPeriod)
